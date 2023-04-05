@@ -12,6 +12,8 @@ from json_parser import fix_and_parse_json
 from duckduckgo_search import ddg
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from colorama import Fore, Style
+import beepy as beeper
 
 cfg = Config()
 
@@ -98,6 +100,8 @@ def execute_command(command_name, arguments):
             return execute_python_file(arguments["file"])
         elif command_name == "task_complete":
             shutdown()
+        elif command_name == "human_input":
+            return human_input(arguments["question"])
         else:
             return f"Unknown command {command_name}"
     # All errors, return "Error: + error message"
@@ -253,3 +257,8 @@ def delete_agent(key):
     if not result:
         return f"Agent {key} does not exist."
     return f"Agent {key} deleted."
+
+def human_input(question):
+    print("Agent asking for human input: \"" + str(question) + "\"")
+    beeper.beep(sound=1)
+    return input(Fore.MAGENTA + "Input:" + Style.RESET_ALL)
