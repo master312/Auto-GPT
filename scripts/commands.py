@@ -18,6 +18,26 @@ import beepy as beeper
 cfg = Config()
 
 
+
+import paramiko
+
+router_ip = "192.168.1.225"
+router_username = "master313"
+router_password = "ovojesvematrix"
+
+ssh = paramiko.SSHClient()
+
+# Load SSH host keys.
+ssh.load_system_host_keys()
+# Add SSH host key automatically if needed.
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+# Connect to router using username/password authentication.
+ssh.connect(router_ip, 
+            username=router_username, 
+            password=router_password,
+            look_for_keys=False )
+
+
 def get_command(response):
     try:
         response_json = fix_and_parse_json(response)
@@ -100,8 +120,27 @@ def execute_command(command_name, arguments):
             return execute_python_file(arguments["file"])
         elif command_name == "task_complete":
             shutdown()
-        elif command_name == "human_input":
+        elif command_name == "human_input" or command_name == "request_human_input":
             return human_input(arguments["question"])
+        elif command_name == "ssh":
+            ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(arguments["cmd"])
+            print("==========Executing SSH Cmd " + str(arguments["cmd"]))
+            
+            output = ""
+            isError = False
+            # check if there is any stderr
+            if ssh_stderr.channel.recv_exit_status() != 0:
+                # if there is stderr, read it as a string
+                output = ssh_stderr.read().decode()
+                isError = True
+            else:
+                # if there is no stderr, read stdout as a string
+                output = ssh_stdout.read().decode()
+
+            ssh_stderr = ssh_stderr.read().decode()
+            print("========== GOT SSH RESPONSE: ================ " + output);
+
+            return ("ERROR - " if isError else "OUTPUT - ") + str(output)
         else:
             return f"Unknown command {command_name}"
     # All errors, return "Error: + error message"
@@ -261,4 +300,4 @@ def delete_agent(key):
 def human_input(question):
     print("Agent asking for human input: \"" + str(question) + "\"")
     beeper.beep(sound=1)
-    return input(Fore.MAGENTA + "Input:" + Style.RESET_ALL)
+    return "{ \"response\":\"" + str(input(Fore.MAGENTA + "Input:" + Style.RESET_ALL)) + "\"}"
